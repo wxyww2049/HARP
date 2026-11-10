@@ -28,7 +28,6 @@ class AsyncGradSyncManager:
 
         self._comm_pending = {}
         self._next_comm_seq = 0
-        self._num_comm_tasks = 0
         self._worker = threading.Thread(
             target=self._grad_worker_loop,
             name=f"grad-sync-worker-rank{local_rank}",
@@ -74,7 +73,6 @@ class AsyncGradSyncManager:
             )
             param.register_post_accumulate_grad_hook(hook)
 
-        self._num_comm_tasks = comm_seq
 
     def _make_hook(self, is_mine, name, is_my_grad, expected_count, comm_seq):
         def hook(p):

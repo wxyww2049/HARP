@@ -11,3 +11,6 @@ __pycache__/
 /e2e-logs/
 /rankfiles/
 /results/
+/build-*.out
+/build-*.err
+/accumulate_sp/build/

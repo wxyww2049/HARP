@@ -1,4 +1,5 @@
 from pathlib import Path
+from shutil import copy2
 
 from torch.utils.cpp_extension import load
 
@@ -20,7 +21,8 @@ def build_async_op(here: Path):
     load(
         name="async_op",
         sources=cc_files,
-        extra_include_paths=[str(csrc_dir)],
+        extra_include_paths=[str(csrc_dir), str(here / "gemm" / "bgemm")],
+        extra_ldflags=[f"-L{here / 'kernels'}", "-lsmeblas", "-fopenmp"],
         extra_cflags=[
             "-O3",
             "-g",
@@ -70,41 +72,13 @@ def build_cpp_async_runtime(here: Path):
     return module
 
 
-def find_latest_so(build_dir: Path):
-    so_candidates = sorted(
-        build_dir.glob("*.so"),
-        key=lambda p: p.stat().st_mtime,
-        reverse=True,
-    )
-    return so_candidates[0] if so_candidates else None
-
-
 def main():
     here = Path(__file__).resolve().parent
-
     build_async_op(here)
     build_cpp_async_runtime(here)
+    for name in ("async_op", "cpp_async_runtime"):
+        copy2(here / "kernels" / name / f"{name}.so", here / "kernels")
 
-    async_op_so = find_latest_so(here / "kernels" / "async_op")
-    runtime_so = find_latest_so(here / "kernels" / "cpp_async_runtime")
-
-    print("\nBuild summary:")
-
-    # copy async_op_so to here / "kernels"
-    if async_op_so is not None:
-        target_path = here / "kernels" / async_op_so.name
-        target_path.write_bytes(async_op_so.read_bytes())
-        print(f"  async_op .so copied to: {target_path}")
-    else:
-        print("  async_op .so not found, skipping copy.")
-
-    # copy cpp_async_runtime to here / "kernels"
-    if runtime_so is not None:
-        target_path = here / "kernels" / runtime_so.name
-        target_path.write_bytes(runtime_so.read_bytes())
-        print(f"  cpp_async_runtime .so copied to: {target_path}")
-    else:
-        print("  cpp_async_runtime .so not found, skipping copy.")
 
 if __name__ == "__main__":
     main()

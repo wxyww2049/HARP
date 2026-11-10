@@ -2,3 +2,12 @@
 __pycache__/
 *.o
 *.ninja*
+/kernels/
+/hmpi/kernels/
+/mem/kernels/
+/gemm/*/build/
+/gemm/bgemm/bgemm_test
+*.so
+/e2e-logs/
+/rankfiles/
+/results/

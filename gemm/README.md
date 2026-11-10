@@ -1,12 +1,3 @@
-## Checkpoint Preparation
-
-Before running the related project workflows, download the required checkpoints and datasets from the repository root:
-
-```bash
-modelscope download --dataset wxyww2049/ckpts --local_dir ./
-modelscope download --dataset wxyww2049/datasets --local_dir ./
-```
-
 ## Supported Shapes
 
 ### Demo1

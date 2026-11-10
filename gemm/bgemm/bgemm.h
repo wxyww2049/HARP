@@ -17,6 +17,8 @@ enum XHBLAS_TRANSPOSE {
 extern "C" {
 #endif
 
+int bgemm_supports(int m, int n, int k, int trans_a, int trans_b);
+
 int bgemm_kernel(int order, int trans_a, int trans_b,
                  int M, int N, int K, float alpha,
                  const __bf16* A, int lda,

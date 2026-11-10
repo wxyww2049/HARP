@@ -101,11 +101,6 @@ class AsyncGradSyncManager:
 
             self._next_comm_seq += 1
 
-            if self._next_comm_seq == self._num_comm_tasks:
-                self._next_comm_seq = 0
-                self._comm_pending.clear()
-                break
-
     def _grad_worker_loop(self):
         rank = int(os.environ["OMPI_COMM_WORLD_RANK"])
         _set_thread_affinity(rank % 16 * 38 + 35)
@@ -164,6 +159,13 @@ class AsyncGradSyncManager:
         tq_time = time() - tq_time
         if self._worker_exc is not None:
             raise RuntimeError("Background grad worker failed") from self._worker_exc
+
+        # Optional conditioning branches may have no gradient this step.
+        # All hooks have drained: submit the remaining active parameters in order.
+        while self._comm_pending:
+            self._next_comm_seq = min(self._comm_pending)
+            self._flush_ready_comm_tasks_in_order()
+        self._next_comm_seq = 0
 
         sp_time = time()
         accumulate_sp.wait_all()

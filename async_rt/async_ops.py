@@ -149,7 +149,7 @@ class MySiLU(torch.autograd.Function):
     def backward(ctx, grad_output):
         (inputx,) = ctx.saved_tensors
         grad_input = torch.empty_like(grad_output)
-        grad_input = torch.ops.async_op.silu_backward_out(grad_output, inputx, grad_input)
+        torch.ops.async_op.silu_backward_out(grad_output, inputx, grad_input)
         return grad_input
 
 

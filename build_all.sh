@@ -2,7 +2,14 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PYTHON_BIN="${PYTHON_BIN:-python}"
+source "${SCRIPT_DIR}/run/env.sh"
+# The site PyTorch was linked against the previous KBLAS SONAME.
+legacy_blas="${TORCH_KBLAS_LIB:-/work_ssd/software/HPCKit/25.1.0.SPC001/kml/bisheng/lib/sme/kblas/multi/libkblas.so}"
+if [[ -f "$legacy_blas" ]]; then
+    mkdir -p "$SCRIPT_DIR/kernels/compat"
+    ln -sfn "$legacy_blas" "$SCRIPT_DIR/kernels/compat/libkblas_armv9p_v25.0.0.so"
+fi
+export MAX_JOBS="${MAX_JOBS:-4}"
 MAKE_BIN="${MAKE_BIN:-make}"
 
 run_in_dir() {

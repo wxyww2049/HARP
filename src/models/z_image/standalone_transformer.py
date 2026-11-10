@@ -516,8 +516,8 @@ class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOr
         self.t_embedder = TimestepEmbedder(min(dim, ADALN_EMBED_DIM), mid_size=1024)
         self.cap_embedder = nn.Sequential(RMSNorm(cap_feat_dim, eps=norm_eps), nn.Linear(cap_feat_dim, dim, bias=True))
 
-        self.x_pad_token = nn.Parameter(torch.empty((1, dim)))
-        self.cap_pad_token = nn.Parameter(torch.empty((1, dim)))
+        self.x_pad_token = nn.Parameter(torch.zeros((1, dim)))
+        self.cap_pad_token = nn.Parameter(torch.zeros((1, dim)))
 
         self.layers = nn.ModuleList(
             [

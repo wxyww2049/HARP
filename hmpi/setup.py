@@ -1,4 +1,6 @@
+import os
 from pathlib import Path
+from shutil import copy2
 from torch.utils.cpp_extension import load
 
 def build_process_group_hmpi(here: Path):
@@ -11,8 +13,8 @@ def build_process_group_hmpi(here: Path):
 
     print("Compiling ProcessGroupHMPI ...")
 
-    hmpi_include = "/work_ssd/software/HPCKit/25.2.1/hmpi/bisheng/release/hmpi/include"
-    hmpi_lib = "/work_ssd/software/HPCKit/25.2.1/hmpi/bisheng/release/hmpi/lib"
+    hmpi_include = str(Path(os.environ["HMPI_ROOT"]) / "include")
+    hmpi_lib = str(Path(os.environ["HMPI_ROOT"]) / "lib")
 
     module = load(
         name="ProcessGroupHMPI",
@@ -43,28 +45,10 @@ def build_process_group_hmpi(here: Path):
     print("Compilation finished.")
     return module
 
-def find_latest_so(build_dir: Path):
-    so_candidates = sorted(
-        build_dir.glob("*.so"),
-        key=lambda p: p.stat().st_mtime,
-        reverse=True,
-    )
-    return so_candidates[0] if so_candidates else None
-
-def main():
-    here = Path(__file__).resolve().parent
-
-    module = build_process_group_hmpi(here)
-
-    print("\nBuild summary:")
-    process_group_so = find_latest_so(here / "kernels" / "ProcessGroupHMPI")
-
-    if process_group_so is not None:
-        target_path = here / "kernels" / process_group_so.name
-        target_path.write_bytes(process_group_so.read_bytes())
-        print(f"  ProcessGroupHMPI .so copied to: {target_path}")
-    else:
-        print("  ProcessGroupHMPI .so not found, skipping copy.")
 
 if __name__ == "__main__":
-    main()
+    here = Path(__file__).resolve().parent
+    build_process_group_hmpi(here)
+    target = here.parent / "kernels"
+    target.mkdir(exist_ok=True)
+    copy2(here / "kernels" / "ProcessGroupHMPI" / "ProcessGroupHMPI.so", target)

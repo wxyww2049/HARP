@@ -374,6 +374,11 @@ static const char* status_message_impl(int status)
 
 } // namespace unified_bgemm
 
+extern "C" int bgemm_supports(int m, int n, int k, int trans_a, int trans_b)
+{
+    return unified_bgemm::find_spec(m, n, k, (XHBLAS_TRANSPOSE)trans_a, (XHBLAS_TRANSPOSE)trans_b) != nullptr;
+}
+
 extern "C" int bgemm_kernel(int order, int trans_a, int trans_b,
                             int M, int N, int K, float alpha,
                             const __bf16* A, int lda,

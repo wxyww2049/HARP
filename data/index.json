@@ -1,10 +1,10 @@
 [
-  "HARP/data/sample_00000.npz",
-  "HARP/data/sample_00001.npz",
-  "HARP/data/sample_00002.npz",
-  "HARP/data/sample_00003.npz",
-  "HARP/data/sample_00004.npz",
-  "HARP/data/sample_00005.npz",
-  "HARP/data/sample_00006.npz",
-  "HARP/data/sample_00007.npz"
+  "sample_00000.npz",
+  "sample_00001.npz",
+  "sample_00002.npz",
+  "sample_00003.npz",
+  "sample_00004.npz",
+  "sample_00005.npz",
+  "sample_00006.npz",
+  "sample_00007.npz"
 ]

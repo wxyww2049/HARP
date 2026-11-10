@@ -33,16 +33,12 @@ def _prepend_import_path(path: Path):
 _prepend_import_path(REPO_ROOT)
 _prepend_import_path(KERNELS_DIR)
 
-from src.datatsets.TiffDataset import TiffDataset, collate_fn
+from src.datatsets.TiffDataset import NpzDataset, custom_collate_fn
 from src.models.z_image.hl_model import Z_Transformer
 from managers.grad_manager import AsyncGradSyncManager
 import ProcessGroupHMPI
 from unigemm_linear import kpLinear,replace_linear_with_kplinear
 import my_allocator
-from kp_rope_embedder import replace_ropeembedder_with_sverope
-import torch.optim.adamw as adamw_mod
-from kp_multi_tensor_adamw import kp_multi_tensor_adamw
-adamw_mod._multi_tensor_adamw = kp_multi_tensor_adamw
 from kp_normalization import replace_rmsNorm_with_kpRMSNorm
 from managers.mem_manager import use_hbm_allocator
 
@@ -129,7 +125,7 @@ def parse_args(input_args=None):
     parser.add_argument("--sp_size", type=int, default=4, help="sp group size")
     parser.add_argument("--rs_size", type=int, default=16, help="sp group size")
     parser.add_argument("--enable_profiler", action="store_true", help="Enable torch profiler for 2 warmup + 3 active steps.")
-    args = parser.parse_args()
+    args = parser.parse_args(input_args)
     args.revision = None
     args.variant = None
     if len(args.sub_work_dir) > 0:
@@ -145,11 +141,13 @@ def main(args):
     world_size = int(os.environ["OMPI_COMM_WORLD_SIZE"])
     rank = int(os.environ["OMPI_COMM_WORLD_RANK"])
     
-    t_rank = (rank % 16) // 4
+    if args.sp_size != 4 or world_size % 4:
+        raise ValueError("HARP training requires groups of 4 sequence-parallel ranks")
+    if args.train_batch_size != 1:
+        raise ValueError("The ring attention kernel supports one sample per rank")
 
-    torch.ops.load_library(f"./kernels/_C.cpython-312-aarch64-linux-gnu.so")
-    torch.ops.load_library(f"./kernels/libring_attention_ops.so")
-    torch.ops.load_library(f"./kernels/async_op.so")
+    torch.ops.load_library(KERNELS_DIR / "libring_attention_ops.so")
+    torch.ops.load_library(KERNELS_DIR / "async_op.so")
 
 
     sp_size=args.sp_size
@@ -204,12 +202,12 @@ def main(args):
     )
     noise_scheduler_copy = copy.deepcopy(noise_scheduler)
 
-    train_dataset = TiffDataset(data_root=args.data_root)
+    train_dataset = NpzDataset(args.data_root)
     
     train_sampler = DistributedSampler(
         train_dataset, 
-        num_replicas=world_size, 
-        rank=rank, 
+        num_replicas=dp_size,
+        rank=rank // sp_size,
         shuffle=True
     )
 
@@ -217,7 +215,7 @@ def main(args):
         train_dataset,
         batch_size=args.train_batch_size,
         shuffle=False,
-        collate_fn=collate_fn,
+        collate_fn=custom_collate_fn,
         num_workers=args.dataloader_num_workers,
         sampler=train_sampler,
         pin_memory=False
@@ -276,7 +274,8 @@ def main(args):
         def __torch_dispatch__(self, func, types, args=(), kwargs=None):
             op_name = func.__name__
             if op_name == "uniform_.default":
-                return torch.ops.async_op.random_uniform(*args, **kwargs)
+                torch.ops.async_op.random_uniform(*args, **kwargs)
+                return args[0]
             return func(*args, **kwargs)
     
     torch.set_default_dtype(weight_dtype)
@@ -290,7 +289,6 @@ def main(args):
   
     torch.set_default_dtype(torch.float32)
 
-    logger.info("All models keeps requires_grad = False")
 
 
     if args.scale_lr:
@@ -399,7 +397,7 @@ def main(args):
     if is_main_process:
         logger.info(f"lr_scheduler:{args.lr_scheduler} initialized successfully.")
 
-    total_batch_size = args.train_batch_size * world_size
+    total_batch_size = args.train_batch_size * dp_size
     if is_main_process:
         logger.info("***** Running training (CPU) *****")
         logger.info(f"  Num examples = {len(train_dataset)}")
@@ -454,9 +452,9 @@ def main(args):
             with torch.no_grad():
                 
                 norm_metadata = batch["norm_metadata"].to(device=device, dtype=weight_dtype)
-                prompt_embeds = batch["prompt_embeds"].to(device=device, dtype=weight_dtype)
+                prompt_embeds = [p.to(device=device, dtype=weight_dtype) for p in batch["prompt_embeds"]]
                 latent_image = batch["latent_image"].to(device=device, dtype=weight_dtype)
-                cond = batch["cond"].to(device=device, dtype=weight_dtype)
+                cond = [c.to(device=device, dtype=weight_dtype) for c in batch["cond"]]
 
                 noise = torch.randn_like(latent_image)
                 bsz = latent_image.shape[0]
@@ -577,17 +575,18 @@ def main(args):
             f"[rank {rank}] profiler operators:\n"
             f"{profiler.key_averages().table(sort_by='self_cpu_time_total', row_limit=50)}"
         )
-    my_allocator.disable()
-    if rank % sp_size == 0:
-        shm.unlink()
-        shm_grad.unlink()
-        shm_state.unlink()
-        shm.close()
-        shm_grad.close()
-        shm_state.close()
     param_sync_manager.wait_all()
     param_sync_manager.shutdown()
     grad_sync_manager.shutdown()
+    dist.barrier()
+    accumulate_sp.shutdown()
+    RUNTIME.shutdown()
+    torch.ops.ring_attention_ops.shutdown()
+    dist.barrier()
+    my_allocator.disable()
+    for segment, owner in ((shm, 3), (shm_grad, 2), (shm_state, 3)):
+        if local_rank == owner:
+            segment.unlink()
     dist.destroy_process_group()
 
 if __name__ == "__main__":

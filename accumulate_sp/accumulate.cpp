@@ -560,6 +560,13 @@ void shutdown_system() {
     worker_threads.clear();
     
     if (comm_thread.joinable()) comm_thread.join();
+
+    // Training has drained all ranks before shutdown. Each rank drops its mappings.
+    for (const auto& [tag, block] : lock_cache) {
+        munmap(block, sizeof(SharedSyncBlock));
+        shm_unlink(("/" + tag + "_sync_block").c_str());
+    }
+    lock_cache.clear();
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {

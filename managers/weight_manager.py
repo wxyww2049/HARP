@@ -1,5 +1,5 @@
 import torch
-from multiprocessing import shared_memory
+from multiprocessing import resource_tracker, shared_memory
 import torch.distributed as dist
 import queue
 import threading
@@ -12,22 +12,20 @@ def is_no_shard_param(name):
 
 def get_shm(shm_name, size,local_rank, master_rank):
     if local_rank == master_rank:
-        try:
-            shm = shared_memory.SharedMemory(name=shm_name, create=True, size=size)
-        except FileExistsError:
-            shm = shared_memory.SharedMemory(name=shm_name, create=False)
-            shm.unlink()
-            shm = shared_memory.SharedMemory(name=shm_name, create=True, size=size)
+        shm = shared_memory.SharedMemory(name=shm_name, create=True, size=size)
     dist.barrier()
     if local_rank != master_rank:
         shm = shared_memory.SharedMemory(name=shm_name, create=False)
+        # Each MPI rank has its own Python resource tracker. The creator owns unlink.
+        resource_tracker.unregister(shm._name, "shared_memory")
     return shm
 
 
 def setup_shared_model(model, param_rank, rank, local_rank, master_rank = 3, grad_master_rank = 2):
-    shm_name = f"zimage_model_shm_{rank // 4}"
-    shm_grad_name = f"zimage_grad_shm_{rank // 4}"
-    shm_state_name = f"zimage_state_shm_{rank // 4}"
+    group = f"{os.environ['TORCH_SHM_ID']}_{rank // 4}"
+    shm_name = f"zimage_model_shm_{group}"
+    shm_grad_name = f"zimage_grad_shm_{group}"
+    shm_state_name = f"zimage_state_shm_{group}"
     offsets = []
     num_parameters = len(list(model.parameters()))
     current_offset = 0

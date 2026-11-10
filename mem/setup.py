@@ -1,4 +1,5 @@
 from pathlib import Path
+from shutil import copy2
 from torch.utils.cpp_extension import load
 
 def build_my_allocator(here: Path):
@@ -33,28 +34,10 @@ def build_my_allocator(here: Path):
     print("Compilation finished.")
     return module
 
-def find_latest_so(build_dir: Path):
-    so_candidates = sorted(
-        build_dir.glob("*.so"),
-        key=lambda p: p.stat().st_mtime,
-        reverse=True,
-    )
-    return so_candidates[0] if so_candidates else None
-
-def main():
-    here = Path(__file__).resolve().parent
-
-    module = build_my_allocator(here)
-
-    print("\nBuild summary:")
-    allocator_so = find_latest_so(here / "kernels" / "my_allocator")
-
-    if allocator_so is not None:
-        target_path = here / "kernels" / allocator_so.name
-        target_path.write_bytes(allocator_so.read_bytes())
-        print(f"  my_allocator .so copied to: {target_path}")
-    else:
-        print("  my_allocator .so not found, skipping copy.")
 
 if __name__ == "__main__":
-    main()
+    here = Path(__file__).resolve().parent
+    build_my_allocator(here)
+    target = here.parent / "kernels"
+    target.mkdir(exist_ok=True)
+    copy2(here / "kernels" / "my_allocator" / "my_allocator.so", target)

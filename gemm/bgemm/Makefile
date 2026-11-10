@@ -1,4 +1,6 @@
-CXX ?= clang++
+ifeq ($(origin CXX),default)
+CXX := clang++
+endif
 MPI_CXX ?= mpicxx
 
 ARCH_FLAGS := -march=armv9-a+sme+bf16+sve
@@ -52,16 +54,16 @@ $(DISPATCH_OBJ): $(DISPATCH_SRC) $(HEADER) | $(BUILD_DIR)
 $(TEST_MAIN_OBJ): $(DISPATCH_SRC) $(HEADER) | $(BUILD_DIR)
 	$(CXX) $(COMMON_FLAGS) $(MPI_CFLAGS) -DFINAL_DEMO_TEST_MAIN -c $< -o $@
 
-$(DEMO1_OBJ): $(DEMO1_SRC) | $(BUILD_DIR)
+$(DEMO1_OBJ): $(DEMO1_SRC) shared_workspace.h | $(BUILD_DIR)
 	$(CXX) $(PIC_FLAGS) -Dxhblas_gemm=bgemm_demo1_impl -c $< -o $@
 
-$(DEMO2_OBJ): $(DEMO2_SRC) | $(BUILD_DIR)
+$(DEMO2_OBJ): $(DEMO2_SRC) shared_workspace.h | $(BUILD_DIR)
 	$(CXX) $(PIC_FLAGS) -Dxhblas_gemm=bgemm_demo2_impl -c $< -o $@
 
-$(OUTER_OBJ): $(OUTER_SRC) | $(BUILD_DIR)
+$(OUTER_OBJ): $(OUTER_SRC) shared_workspace.h | $(BUILD_DIR)
 	$(CXX) $(PIC_FLAGS) -Dxhblas_gemm=bgemm_outer_impl -c $< -o $@
 
-$(VECTOR_OBJ): $(VECTOR_SRC) | $(BUILD_DIR)
+$(VECTOR_OBJ): $(VECTOR_SRC) shared_workspace.h | $(BUILD_DIR)
 	$(CXX) $(PIC_FLAGS) -Dxhblas_gemm=bgemm_vector_impl -c $< -o $@
 
 $(LIB_NAME): $(DISPATCH_OBJ) $(BACKEND_OBJS)

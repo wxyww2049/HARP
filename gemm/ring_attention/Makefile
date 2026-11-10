@@ -1,8 +1,8 @@
 PYTHON_BIN ?= python
 RING_ATTN_CXX ?= mpicxx
 
-KBLAS_INCLUDE ?= ./new_blas
-KBLAS_LIBDIR ?= ./new_blas/multi
+KBLAS_INCLUDE ?= $(HPCKIT_ROOT)/kml/bisheng/include
+KBLAS_LIBDIR ?= $(HPCKIT_ROOT)/kml/bisheng/lib/sme/kblas/multi
 ARCH_FLAGS ?= -march=armv9-a+sme+bf16+sve
 
 BUILD_DIR := build
@@ -15,7 +15,7 @@ TORCH_INCLUDE_FLAGS := $(shell $(PYTHON_BIN) -c "from torch.utils.cpp_extension 
 TORCH_LIB_FLAGS := $(shell $(PYTHON_BIN) -c "from torch.utils.cpp_extension import library_paths; print(' '.join('-L{0} -Wl,-rpath,{0}'.format(p) for p in library_paths()))")
 TORCH_ABI := $(shell $(PYTHON_BIN) -c "import torch; print(int(torch._C._GLIBCXX_USE_CXX11_ABI))")
 
-CXXFLAGS := -O3 -g -shared -fPIC -fopenmp -D_GLIBCXX_USE_CXX11_ABI=$(TORCH_ABI) $(ARCH_FLAGS)
+CXXFLAGS := -std=c++17 -O3 -g -shared -fPIC -fopenmp -D_GLIBCXX_USE_CXX11_ABI=$(TORCH_ABI) $(ARCH_FLAGS)
 CPPFLAGS := -I$(KBLAS_INCLUDE) $(TORCH_INCLUDE_FLAGS)
 LDFLAGS := -L$(KBLAS_LIBDIR) -Wl,-rpath,$(KBLAS_LIBDIR) $(TORCH_LIB_FLAGS)
 LDLIBS := -ltorch_cpu -ltorch -lc10 -lkblas -lnuma -lm --rtlib=compiler-rt

@@ -20,6 +20,10 @@ def generate_cpuset_rankfile(node_str, max_nodes=None, output_file="rankfile_cpu
                 
     # === 新增：对节点列表进行自然排序 ===
     # 使用正则表达式提取字符串中的数字，确保类似 node2 排在 node10 前面
+    expanded_nodes = list(dict.fromkeys(expanded_nodes))
+    if max_nodes is not None and len(expanded_nodes) < max_nodes:
+        raise ValueError(f"Requested {max_nodes} nodes, allocation contains {len(expanded_nodes)}")
+
     expanded_nodes.sort(key=lambda x: [int(c) if c.isdigit() else c.lower() for c in re.split(r'(\d+)', x)])
 
     # 截取所需的最大节点数 (在排序之后截取，保证每次取出的节点是最靠前的 N 个)

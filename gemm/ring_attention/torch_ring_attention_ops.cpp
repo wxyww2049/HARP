@@ -4,6 +4,8 @@
 #include <torch/library.h>
 #include <tuple>
 
+void destroy_ring_die_shared_memory();
+
 void ring_attention_forward(__bf16* Q, __bf16* K, __bf16* V, float* out,
                             int t_num, int h_num, int h_len, int sp_size,
                             __bf16* m_i, float* l_i, float scale);
@@ -258,6 +260,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> ring_attention_backward_op(
 }  // namespace
 
 TORCH_LIBRARY(ring_attention_ops, m) {
+    m.def("shutdown() -> ()", &destroy_ring_die_shared_memory);
     m.def("ring_attention_forward(Tensor q, Tensor k, Tensor v, Tensor(a!) out, Tensor(b!) m_i, Tensor(c!) l_i, int sp_size, float scale) -> (Tensor(a!), Tensor(b!), Tensor(c!))");
     m.def("ring_attention_backward(Tensor q, Tensor(a!) grad_q, Tensor k, Tensor(b!) dK, Tensor v, Tensor(c!) dV, Tensor grad_out, Tensor m_i, Tensor l_i, Tensor D, int sp_size, float scale) -> (Tensor(a!), Tensor(b!), Tensor(c!))");
 }

@@ -6,7 +6,8 @@ from torch.utils._python_dispatch import TorchDispatchMode
 from async_rt import async_ops
 
 import sys
-sys.path.insert(0, "kernels")
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "kernels"))
 
 import cpp_async_runtime
 

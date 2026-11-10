@@ -1,4 +1,5 @@
 #define BGEMM
+#include "../memory_node.h"
 #include <fcntl.h>
 #include <sys/ipc.h>
 #include <sys/mman.h>
@@ -635,7 +636,7 @@ static void *manual_hbmalloc_numa(size_t size, int numa_id)
             return NULL;
         }
     }
-    unsigned long msk = 1ul << (numa_id + numa_offset);
+    unsigned long msk = 1ul << harp_memory_node(numa_id + numa_offset);
     long rc = mbind(ptr, size, MPOL_BIND, &msk, 64, 0);
     if (rc != 0) {
         munmap(ptr, size);
@@ -1525,7 +1526,7 @@ void bind_shared_region_to_hbm(void* addr,
                                std::size_t bytes,
                                int numa_id) {
     const unsigned long mask =
-        1ul << static_cast<unsigned long>(numa_id + numa_offset);
+        1ul << harp_memory_node(numa_id + numa_offset);
     if (mbind(addr, bytes, MPOL_BIND, &mask, 64, 0) != 0) {
         std::fprintf(stderr,
                      "shared mbind failed (numa=%d): errno=%d (%s)\n",

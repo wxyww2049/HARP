@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../memory_node.h"
+
 #include <errno.h>
 #include <limits.h>
 #include <numaif.h>
@@ -129,7 +131,7 @@ inline void log_event(const char* module, const char* action, const char* tag,
 
 inline void* alloc_bytes(size_t size, int numa_id, const char* module, const char* tag)
 {
-    const int resolved_numa = resolve_numa_id(numa_id);
+    const int resolved_numa = harp_memory_node(resolve_numa_id(numa_id));
     const size_t mapped_size = align_to_hugepage(size);
 
     void* ptr = mmap(NULL, mapped_size, PROT_READ | PROT_WRITE,
@@ -204,7 +206,7 @@ inline void free_external(void* ptr, size_t size, const char* module, const char
 
 inline void reset_for_numa_change(int numa_id, const char* module)
 {
-    const int resolved_numa = resolve_numa_id(numa_id);
+    const int resolved_numa = harp_memory_node(resolve_numa_id(numa_id));
     if (g_shared_workspace.numa_id == INT_MIN) {
         g_shared_workspace.numa_id = resolved_numa;
         return;

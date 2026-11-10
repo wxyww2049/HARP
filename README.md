@@ -30,7 +30,7 @@ dsub -nn 1 -rpn 1 -R "cpu=16" -n HARP-build -q q_grapes \
 bash run/run.sh 1 --max_train_steps 2
 ```
 
-第一个参数是节点数，后续参数传给 `train.py`。默认队列是 `q_grapes`，可通过 `HARP_QUEUE` 覆盖。每个节点按 608 个核、16 个 MPI 进程布局，每个序列并行组 4 个进程，每进程批大小为 1。默认使用 `z_image/` 的模型配置和 `data/index.json`，共训练 1000 步。
+第一个参数是节点数，后续参数传给 `train.py`。默认队列是 `q_grapes`，可通过 `HARP_QUEUE` 覆盖。每个节点按 608 个核、16 个 MPI 进程布局，每个序列并行组 4 个进程，每进程批大小为 1。启动时优先使用该进程可访问的 HBM，若节点仅开放 DDR，则使用本地 DDR。也可设置 `HARP_USE_HBM=0` 选择 DDR。默认使用 `z_image/` 的模型配置和 `data/index.json`，共训练 1000 步。
 
 ```bash
 djob JOB_ID

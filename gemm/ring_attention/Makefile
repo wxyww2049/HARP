@@ -30,7 +30,7 @@ $(BUILD_DIR):
 $(KERNELS_DIR):
 	mkdir -p $@
 
-$(TARGET): $(SRCS) | $(BUILD_DIR)
+$(TARGET): $(SRCS) ../memory_node.h | $(BUILD_DIR)
 	$(RING_ATTN_CXX) $(CXXFLAGS) $(SRCS) $(CPPFLAGS) $(LDFLAGS) $(LDLIBS) -o $@
 
 $(FINAL_TARGET): $(TARGET) | $(KERNELS_DIR)

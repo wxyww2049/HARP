@@ -18,7 +18,7 @@ TEST_NAME := bgemm_test
 FINAL_LIB := $(KERNELS_DIR)/libsmeblas.so
 
 DISPATCH_SRC := bgemm.cpp
-HEADER := bgemm.h
+HEADER := bgemm.h ../memory_node.h
 
 DEMO1_SRC := ../bgemm_demo1/bgemm.cpp
 DEMO2_SRC := ../bgemm_demo2/gemm.cpp
@@ -54,16 +54,16 @@ $(DISPATCH_OBJ): $(DISPATCH_SRC) $(HEADER) | $(BUILD_DIR)
 $(TEST_MAIN_OBJ): $(DISPATCH_SRC) $(HEADER) | $(BUILD_DIR)
 	$(CXX) $(COMMON_FLAGS) $(MPI_CFLAGS) -DFINAL_DEMO_TEST_MAIN -c $< -o $@
 
-$(DEMO1_OBJ): $(DEMO1_SRC) shared_workspace.h | $(BUILD_DIR)
+$(DEMO1_OBJ): $(DEMO1_SRC) shared_workspace.h ../memory_node.h | $(BUILD_DIR)
 	$(CXX) $(PIC_FLAGS) -Dxhblas_gemm=bgemm_demo1_impl -c $< -o $@
 
-$(DEMO2_OBJ): $(DEMO2_SRC) shared_workspace.h | $(BUILD_DIR)
+$(DEMO2_OBJ): $(DEMO2_SRC) shared_workspace.h ../memory_node.h | $(BUILD_DIR)
 	$(CXX) $(PIC_FLAGS) -Dxhblas_gemm=bgemm_demo2_impl -c $< -o $@
 
-$(OUTER_OBJ): $(OUTER_SRC) shared_workspace.h | $(BUILD_DIR)
+$(OUTER_OBJ): $(OUTER_SRC) shared_workspace.h ../memory_node.h | $(BUILD_DIR)
 	$(CXX) $(PIC_FLAGS) -Dxhblas_gemm=bgemm_outer_impl -c $< -o $@
 
-$(VECTOR_OBJ): $(VECTOR_SRC) shared_workspace.h | $(BUILD_DIR)
+$(VECTOR_OBJ): $(VECTOR_SRC) shared_workspace.h ../memory_node.h | $(BUILD_DIR)
 	$(CXX) $(PIC_FLAGS) -Dxhblas_gemm=bgemm_vector_impl -c $< -o $@
 
 $(LIB_NAME): $(DISPATCH_OBJ) $(BACKEND_OBJS)

@@ -38,11 +38,22 @@ done
 benuma=$(((rank % 16) / 4 * 4))
 ennuma=$((benuma + 3))
 hbm_numa=$((rank%16+16))
-export MEMKIND_HBW_NODES=$hbm_numa
+membind="$benuma-$ennuma,$hbm_numa"
+if [[ ${HARP_USE_HBM:-1} == 1 ]] && numactl -m "$membind" true 2>/dev/null; then
+    export HARP_MEMORY_NODE=$hbm_numa
+else
+    cpu_nodes=(/sys/devices/system/cpu/cpu"$be"/node[0-9]*)
+    export HARP_MEMORY_NODE=${cpu_nodes[0]##*node}
+    membind="$benuma-$ennuma"
+    if ! numactl -m "$membind" true 2>/dev/null; then
+        membind=$HARP_MEMORY_NODE
+    fi
+fi
+export MEMKIND_HBW_NODES=$HARP_MEMORY_NODE
 if ((rank < 16)); then
     echo $be-$en
     echo $OMP_PLACES_LIST
-    echo "numactl -m $benuma-$ennuma,$hbm_numa"
+    echo "numactl -m $membind (allocator node $HARP_MEMORY_NODE)"
 fi
 
 OMP_PLACES="$OMP_PLACES_LIST"
@@ -52,7 +63,7 @@ export OMP_PROC_BIND=spread
 export OMP_MAX_ACTIVE_LEVELS=3
 export BLAS_NUM_THREADS=1
 export OMP_WAIT_POLICY=passive
-numactl -m $benuma-$ennuma,$hbm_numa \
+numactl -m "$membind" \
     taskset -c $be-$en \
     "${PYTHON_BIN:-python}" train.py \
     --pretrained_model_name_or_path ./z_image \

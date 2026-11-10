@@ -1,4 +1,5 @@
 #include "bgemm.h"
+#include "../memory_node.h"
 #include <math.h>
 #include <omp.h>
 #include <sched.h>
@@ -45,7 +46,7 @@ static void* alloc_hbm(size_t size, int numa_id, const char* tag)
         }
     }
 
-    const unsigned long mask = 1ul << (unsigned long)(numa_id+16);
+    const unsigned long mask = 1ul << harp_memory_node(numa_id + 16);
     long rc = mbind(ptr, mapped_size, MPOL_BIND, &mask, kMbindMaxNodes, 0);
     if (rc != 0) {
         munmap(ptr, mapped_size);

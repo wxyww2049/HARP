@@ -166,7 +166,8 @@ def main(args):
     os.environ["LOCAL_RANK"] = str(local_rank)
     os.environ["WORLD_SIZE"] = str(world_size)
     
-    my_allocator.init_allocator((rank % 16) + 16, False)
+    memory_node = int(os.environ.get("HARP_MEMORY_NODE", (rank % 16) + 16))
+    my_allocator.init_allocator(memory_node, False)
     dist.init_process_group(backend="hmpi", world_size=world_size, rank=rank)
     device = torch.device("cpu")
 
